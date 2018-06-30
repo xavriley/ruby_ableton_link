@@ -1,40 +1,19 @@
 #include "rice/Class.hpp"
 #include "rice/String.hpp"
+#include "rice/Symbol.hpp"
+#include "rice/Hash.hpp"
 #include "ableton/Link.hpp"
 
 using namespace Rice;
 
-double beat{0.0};
-double phase{0.0};
 double initial_tempo{120.0};
 double quantum{4.0};
 ableton::Link linkInstance(initial_tempo);
 
-// Draft API
-//           // link = AbletonLink.new
-//           // link.enable / enabled? / disable
-//           // link.enableStartStopSync / startStopSyncEnabled?
-//           // link.startPlaying / isPlaying? / stopPlaying
-//
-// link.numPeers / numPeersCallback
+// TODO
+// link.numPeersCallback
 // link.setTempoCallback
 // link.setStartStopCallback
-//
-//            // link.tempo / set_tempo
-//            // link.quantum / set_quantum
-//            // link.timeUntilDownbeat(offset = 0)
-// link.timeUntilBeat(beat) e.g. next 0.25 of a beat or next 0.5
-// link.timeUntilPhase(phase) e.g. any number less than (quantum - 1), e.g. time until 2.5th beat in phase
-// link.timeUntilSubdivision(subdivision) e.g. next 0.25 of a beat or next 0.5
-//
-// link.requestDownbeatAt(offset)
-// link.forceDownbeatAt(offset)
-
-Object ableton_link_initialize(Object self)
-{
-  // self.iv_set("@tempo", tempo);
-  return self;
-}
 
 void ableton_link_enable()
 {
@@ -120,12 +99,92 @@ Object ableton_link_time_until_downbeat()
   return to_ruby(time_until_downbeat.count());
 }
 
+Object ableton_link_time_until_beat_within_bar(double req_phase)
+{
+  ableton::Link::SessionState sessionState = linkInstance.captureAppSessionState();
+
+  double wait;
+  double phase_now = sessionState.phaseAtTime(linkInstance.clock().micros(), quantum);
+  double current_beat = sessionState.beatAtTime(linkInstance.clock().micros(), quantum);
+
+  if(req_phase > phase_now) {
+    // we haven't reached the target beat in the bar yet
+    wait = req_phase - phase_now;
+  } else {
+    // we already passed the target beat
+    // wait till the start of the next downbeat and then wait for target beat
+    wait = (quantum - phase_now) + req_phase;
+  }
+
+  std::chrono::duration<float> time_until_beat =
+    std::chrono::duration<float>(sessionState.timeAtBeat(current_beat + wait, quantum) - linkInstance.clock().micros());
+
+  return to_ruby(time_until_beat.count());
+}
+
+Object ableton_link_time_until_subdivision_within_beat(double req_beat)
+{
+  ableton::Link::SessionState sessionState = linkInstance.captureAppSessionState();
+
+  double target_beat;
+  double current_beat = sessionState.beatAtTime(linkInstance.clock().micros(), quantum);
+
+  if(req_beat > fmod(current_beat, 1.0)) {
+    // we haven't reached the target beat in the bar yet
+    target_beat = floor(current_beat) +req_beat;
+  } else {
+    // we already passed the target
+    // wait till the start of the next beat and then wait for target beat
+    // note the floor
+    target_beat = floor(current_beat) + 1.0 + req_beat;
+  }
+
+  std::chrono::duration<float> time_until_subdivision =
+    std::chrono::duration<float>(sessionState.timeAtBeat(target_beat, quantum) - linkInstance.clock().micros());
+
+  return to_ruby(time_until_subdivision.count());
+}
+
+Object ableton_link_status()
+{
+  ableton::Link::SessionState sessionState = linkInstance.captureAppSessionState();
+
+  Hash output;
+  output[Symbol("beat")] = to_ruby(sessionState.beatAtTime(linkInstance.clock().micros(), quantum));
+  output[Symbol("phase")] = to_ruby(sessionState.phaseAtTime(linkInstance.clock().micros(), quantum));
+  output[Symbol("playing?")] = to_ruby(sessionState.isPlaying());
+  output[Symbol("tempo")] = to_ruby(sessionState.tempo());
+  output[Symbol("peers")] = to_ruby(linkInstance.numPeers());
+
+  return output;
+}
+
+void ableton_link_request_beat_after(double req_beat, double offset)
+{
+  ableton::Link::SessionState sessionState = linkInstance.captureAppSessionState();
+  std::chrono::microseconds req_time = linkInstance.clock().micros() + std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::duration<double>(offset));
+  sessionState.requestBeatAtTime(req_beat, req_time, quantum);
+  linkInstance.commitAppSessionState(sessionState);
+}
+
+void ableton_link_force_beat_after(double req_beat, double offset)
+{
+  ableton::Link::SessionState sessionState = linkInstance.captureAppSessionState();
+  std::chrono::microseconds req_time = linkInstance.clock().micros() + std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::duration<double>(offset));
+  sessionState.forceBeatAtTime(req_beat, req_time, quantum);
+  linkInstance.commitAppSessionState(sessionState);
+}
+
+/* void ableton_link_num_peers_callback(Object block) */
+/* { */
+/*   linkInstance.setNumPeersCallback(protect(rb_yield, block)); */
+/* } */
+
 extern "C"
 void Init_ableton_link()
 {
   Class rb_cAbletonLink =
     define_class("AbletonLink")
-    .define_method("initialize", &ableton_link_initialize)
     .define_method("enable", &ableton_link_enable)
     .define_method("disable", &ableton_link_disable)
     .define_method("enabled?", &ableton_link_enabled)
@@ -139,5 +198,11 @@ void Init_ableton_link()
     .define_method("set_tempo", &ableton_link_set_tempo)
     .define_method("quantum", &ableton_link_quantum)
     .define_method("set_quantum", &ableton_link_set_quantum)
-    .define_method("time_until_downbeat", &ableton_link_time_until_downbeat);
+    .define_method("status", &ableton_link_status)
+    // .define_method("num_peers_callback", &ableton_link_num_peers_callback)
+    .define_method("request_beat_after", &ableton_link_request_beat_after)
+    .define_method("force_beat_after!", &ableton_link_force_beat_after)
+    .define_method("time_until_downbeat", &ableton_link_time_until_downbeat)
+    .define_method("time_until_beat_within_bar", &ableton_link_time_until_beat_within_bar)
+    .define_method("time_until_subdivision_within_beat", &ableton_link_time_until_subdivision_within_beat);
 }

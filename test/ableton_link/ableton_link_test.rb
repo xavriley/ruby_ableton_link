@@ -66,4 +66,39 @@ class AbletonLinkTest < Minitest::Test
     assert tud >= 0.0
     assert tud <= @link.quantum
   end
+
+  def test_time_until_beat_within_bar
+    @link.enable
+    @link.set_tempo(60) # makes maths easier
+    @link.force_beat_after!(3.0, 0.0) # set fourth beat to be now (zero indexed!)
+    # beat not yet reached
+    assert @link.time_until_beat_within_bar(3.5).round(1) == 0.5
+    # beat already passed - wait until the next bar
+    assert @link.time_until_beat_within_bar(2.0).ceil == 3
+  end
+
+  def test_time_until_subdivision_within_beat
+    @link.enable
+    @link.set_tempo(60) # makes maths easier
+    @link.force_beat_after!(2.5, 0.0) # set offbeat of beat 3 to be now
+    # beat not yet reached
+    assert @link.time_until_subdivision_within_beat(0.75).round(2) == 0.25
+    # beat already passed - wait until the next bar
+    assert @link.time_until_subdivision_within_beat(0.25).round(2) == 0.75
+  end
+
+  def test_request_beat_after
+    @link.enable
+    @link.request_beat_after(0, 0.5) # set beat zero 0.5 secs into future
+    assert @link.status[:beat] < 0.0 # we shouldn't have hit beat zero yet
+  end
+
+  def test_force_beat_after
+    # this method is impolite and shouldn't be used really
+
+    @link.enable
+    @link.force_beat_after!(0, 0.0) # set beat zero to be now
+    assert @link.status[:beat] >= 0.0 # we should be at beat zero or very close
+    assert @link.status[:beat] <= 1.0 # we should be at beat zero or very close
+  end
 end
