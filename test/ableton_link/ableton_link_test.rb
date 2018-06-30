@@ -9,10 +9,6 @@ class AbletonLinkTest < Minitest::Test
     refute_nil ::AbletonLink::VERSION
   end
 
-  def test_it_says_hello
-    assert @link.hello == "hello, world"
-  end
-
   def test_it_enables_session
     @link.enable
     assert @link.enabled?
@@ -24,30 +20,28 @@ class AbletonLinkTest < Minitest::Test
   end
 
   def test_it_enables_start_stop_sync
-    @link.enableStartStopSync
-    assert @link.startStopSyncEnabled?
+    @link.enable_start_stop_sync
+    assert @link.start_stop_sync_enabled?
   end
 
   def test_it_disables_start_stop_sync
-    @link.disableStartStopSync
-    refute @link.startStopSyncEnabled?
+    @link.disable_start_stop_sync
+    refute @link.start_stop_sync_enabled?
   end
 
   def test_it_starts_playing
     @link.enable
     @link.start_playing
-    assert @link.isPlaying?
+    assert @link.is_playing?
   end
 
   def test_it_stops_playing
     @link.enable
     @link.stop_playing
-    refute @link.isPlaying?
+    refute @link.is_playing?
   end
 
   def test_it_sets_tempo
-    assert @link.tempo == 120.0
-
     init_tempo = @link.tempo
     new_tempo = init_tempo + 10
     @link.set_tempo(new_tempo)
@@ -55,13 +49,21 @@ class AbletonLinkTest < Minitest::Test
     assert @link.tempo == (init_tempo + 10)
   end
 
+  def test_it_sets_quantum
+    init_quantum = @link.quantum
+    new_quantum = init_quantum + 1
+    @link.set_quantum(new_quantum)
+    refute @link.quantum == init_quantum
+    assert @link.quantum == (init_quantum + 1)
+    @link.set_quantum(init_quantum)
+  end
+
   def test_time_until_downbeat
     @link.enable
     @link.set_tempo(120)
     @link.start_playing
-    sleep 1
     tud = @link.time_until_downbeat
-    puts tud
     assert tud >= 0.0
+    assert tud <= @link.quantum
   end
 end
