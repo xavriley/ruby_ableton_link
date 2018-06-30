@@ -6,8 +6,9 @@ using namespace Rice;
 
 double beat{0.0};
 double phase{0.0};
-double bpm{120.0};
+double tempo{120.0};
 double quantum{4.0};
+ableton::Link linkInstance(tempo);
 
 Object ableton_link_hello(Object /* self */)
 {
@@ -15,19 +16,103 @@ Object ableton_link_hello(Object /* self */)
   return str;
 }
 
-Object ableton_link_get_bpm(Object /* self */)
+// Draft API
+//           // link = AbletonLink.new
+//           // link.enable / enabled? / disable
+//           // link.enableStartStopSync / startStopSyncEnabled?
+//           // link.startPlaying / isPlaying? / stopPlaying
+//
+// link.numPeers / numPeersCallback
+// link.setTempoCallback
+// link.setStartStopCallback
+//
+//            // link.tempo / setTempo
+//            // link.timeUntilDownbeat(offset = 0)
+// link.timeUntilBeat(beat) e.g. next 0.25 of a beat or next 0.5
+// link.timeUntilPhase(phase) e.g. any number less than (quantum - 1), e.g. time until 2.5th beat in phase
+// link.timeUntilSubdivision(subdivision) e.g. next 0.25 of a beat or next 0.5
+//
+// link.requestDownbeatAt(offset)
+// link.forceDownbeatAt(offset)
+
+Object ableton_link_initialize(Object self)
 {
-  return to_ruby(bpm);
+  // self.iv_set("@tempo", tempo);
+  return self;
 }
 
-Object ableton_link_time_now(Object /* self */)
+void ableton_link_enable()
 {
-  ableton::Link linkInstance(120.);
-  const std::chrono::microseconds time = linkInstance.clock().micros();
-  // this doesn't work currently
-  // would need to split the long long into time and then fraction
-  // and use Time.at(time, frac) in a custom
-  return to_ruby(time.count());
+  linkInstance.enable(true);
+}
+
+void ableton_link_disable()
+{
+  linkInstance.enable(false);
+}
+
+Object ableton_link_enabled()
+{
+  return linkInstance.isEnabled();
+}
+
+void ableton_link_start_stop_sync_enable()
+{
+  linkInstance.enableStartStopSync(true);
+}
+
+void ableton_link_start_stop_sync_disable()
+{
+  linkInstance.enableStartStopSync(false);
+}
+
+Object ableton_link_start_stop_sync_enabled()
+{
+  return linkInstance.isStartStopSyncEnabled();
+}
+
+void ableton_link_start_playing()
+{
+  ableton::Link::SessionState sessionState = linkInstance.captureAppSessionState();
+  sessionState.setIsPlaying(true, linkInstance.clock().micros());
+  linkInstance.commitAppSessionState(sessionState);
+}
+
+void ableton_link_stop_playing()
+{
+  ableton::Link::SessionState sessionState = linkInstance.captureAppSessionState();
+  sessionState.setIsPlaying(false, linkInstance.clock().micros());
+  linkInstance.commitAppSessionState(sessionState);
+}
+
+Object ableton_link_is_playing()
+{
+  ableton::Link::SessionState sessionState = linkInstance.captureAppSessionState();
+  return sessionState.isPlaying();
+}
+
+Object ableton_link_tempo()
+{
+  ableton::Link::SessionState sessionState = linkInstance.captureAppSessionState();
+  return to_ruby(sessionState.tempo());
+}
+
+void ableton_link_set_tempo(double tempo)
+{
+  ableton::Link::SessionState sessionState = linkInstance.captureAppSessionState();
+  sessionState.setTempo(tempo, linkInstance.clock().micros());
+  linkInstance.commitAppSessionState(sessionState);
+}
+
+Object ableton_link_time_until_downbeat()
+{
+  ableton::Link::SessionState sessionState = linkInstance.captureAppSessionState();
+  double beatsLeftInBar = quantum - sessionState.phaseAtTime(linkInstance.clock().micros(), quantum);
+  double currentBeat = sessionState.beatAtTime(linkInstance.clock().micros(), quantum);
+
+  std::chrono::duration<float> time_until_downbeat = std::chrono::duration<float>(sessionState.timeAtBeat(currentBeat + beatsLeftInBar, quantum) - linkInstance.clock().micros());
+
+  return to_ruby(time_until_downbeat.count());
 }
 
 extern "C"
@@ -35,7 +120,18 @@ void Init_ableton_link()
 {
   Class rb_cAbletonLink =
     define_class("AbletonLink")
+    .define_method("initialize", &ableton_link_initialize)
     .define_method("hello", &ableton_link_hello)
-    .define_method("get_bpm", &ableton_link_get_bpm)
-    .define_method("time_now", &ableton_link_time_now);
+    .define_method("enable", &ableton_link_enable)
+    .define_method("disable", &ableton_link_disable)
+    .define_method("enabled?", &ableton_link_enabled)
+    .define_method("enableStartStopSync", &ableton_link_start_stop_sync_enable)
+    .define_method("disableStartStopSync", &ableton_link_start_stop_sync_disable)
+    .define_method("startStopSyncEnabled?", &ableton_link_start_stop_sync_enabled)
+    .define_method("start_playing", &ableton_link_start_playing)
+    .define_method("stop_playing", &ableton_link_stop_playing)
+    .define_method("isPlaying?", &ableton_link_is_playing)
+    .define_method("tempo", &ableton_link_tempo)
+    .define_method("set_tempo", &ableton_link_set_tempo)
+    .define_method("time_until_downbeat", &ableton_link_time_until_downbeat);
 }
