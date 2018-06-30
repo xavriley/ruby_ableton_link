@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    ruby_link (0.1.0)
+    ruby_ableton_link (0.1.0)
 
 GEM
   remote: https://rubygems.org/
@@ -21,7 +21,7 @@ DEPENDENCIES
   rake (~> 10.0)
   rake-compiler
   rice (~> 2.1)
-  ruby_link!
+  ruby_ableton_link!
 
 BUNDLED WITH
    1.16.1

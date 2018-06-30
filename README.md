@@ -1,15 +1,18 @@
-# Ruby::Link
+# AbletonLink
+# WIP: please don't use this yet
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/ruby/link`. To experiment with that code, run `bin/console` for an interactive prompt.
+A Ruby wrapper for the Ableton Link C++ library.
 
-TODO: Delete this and the text above, and describe your gem
+## What is Ableton Link?
+
+Ableton Link is a new technology that synchronises beat, phase and tempo of Ableton Live and Link-enabled applications over a wireless or wired network. It lets you play devices together with the freedom of a live band. Anyone can start and stop their part while others keep playing, and anyone can adjust the tempo and the rest will follow. You can use Ableton Link with an increasing number of Link enabled applications – even without Live in your setup.
 
 ## Installation
 
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'ruby_link'
+gem 'ruby_ableton_link'
 ```
 
 And then execute:
@@ -18,11 +21,13 @@ And then execute:
 
 Or install it yourself as:
 
-    $ gem install ruby_link
+    $ gem install ruby_ableton_link
 
 ## Usage
 
-TODO: Write usage instructions here
+```
+AbletonLink.new.hello
+```
 
 ## Development
 
@@ -32,7 +37,7 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/xavriley/ruby_link. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
+Bug reports and pull requests are welcome on GitHub at https://github.com/xavriley/ruby_ableton_link. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
 
 ## License
 

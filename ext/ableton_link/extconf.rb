@@ -45,4 +45,4 @@ dir_config("libs", HEADER_DIRS, LIB_DIRS)
 
 $CXXFLAGS += " -std=c++11 -stdlib=libc++ "
 
-create_makefile('ruby_link')
+create_makefile('ableton_link')

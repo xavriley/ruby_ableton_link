@@ -9,18 +9,18 @@ double phase{0.0};
 double bpm{120.0};
 double quantum{4.0};
 
-Object ruby_link_hello(Object /* self */)
+Object ableton_link_hello(Object /* self */)
 {
   String str("hello, world");
   return str;
 }
 
-Object ruby_link_get_bpm(Object /* self */)
+Object ableton_link_get_bpm(Object /* self */)
 {
   return to_ruby(bpm);
 }
 
-Object ruby_link_time_now(Object /* self */)
+Object ableton_link_time_now(Object /* self */)
 {
   ableton::Link linkInstance(120.);
   const std::chrono::microseconds time = linkInstance.clock().micros();
@@ -31,11 +31,11 @@ Object ruby_link_time_now(Object /* self */)
 }
 
 extern "C"
-void Init_ruby_link()
+void Init_ableton_link()
 {
-  Module rb_mRubyLink =
-    define_module("RubyLink")
-    .define_module_function("hello", &ruby_link_hello)
-    .define_module_function("get_bpm", &ruby_link_get_bpm)
-    .define_module_function("time_now", &ruby_link_time_now);
+  Class rb_cAbletonLink =
+    define_class("AbletonLink")
+    .define_method("hello", &ableton_link_hello)
+    .define_method("get_bpm", &ableton_link_get_bpm)
+    .define_method("time_now", &ableton_link_time_now);
 }
