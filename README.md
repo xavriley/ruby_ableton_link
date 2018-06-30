@@ -1,6 +1,12 @@
 # AbletonLink
 # WIP: please don't use this yet
 
+## Todo
+
+-[ ] include Ableton Link as submodule
+-[ ] allow for compilation on platforms other than Mac
+-[ ] work out something for the tempo, peers and startStop callbacks
+
 A Ruby wrapper for the Ableton Link C++ library.
 
 ## What is Ableton Link?
@@ -26,8 +32,11 @@ Or install it yourself as:
 ## Usage
 
 ```
-AbletonLink.new.hello
+link = AbletonLink.new
+puts link.status
 ```
+
+See the tests for the full API
 
 ## Development
 
