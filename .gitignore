@@ -6,5 +6,4 @@
 /pkg/
 /spec/reports/
 /tmp/
-tmp/
-lib/ableton_link/*.bundle
+/lib/ableton_link/*.bundle
