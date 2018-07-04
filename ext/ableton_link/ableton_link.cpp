@@ -1,3 +1,4 @@
+#include "oscpkt.hh"
 #include "rice/Class.hpp"
 #include "rice/String.hpp"
 #include "rice/Symbol.hpp"
@@ -10,18 +11,87 @@ double initial_tempo{120.0};
 double quantum{4.0};
 ableton::Link linkInstance(initial_tempo);
 
+// For outbound OSC comms
+// Adapted from https://stackoverflow.com/a/32274589/2618015
+asio::io_service io_service;
+asio::ip::udp::socket sock(io_service);
+asio::ip::udp::endpoint remote_endpoint;
+
 // TODO
+// detect initial tempo change
+//
 // link.numPeersCallback
-// link.setTempoCallback
-// link.setStartStopCallback
+
+void set_tempo_callback(double bpm)
+{
+  // Asynchronous callbacks are hard in Ruby extensions
+  // Ideally this would be handled in a Ruby proc
+  //
+  // As a workaround we send an OSC message on a port
+  // with the values for the tempo change. These can
+  // be used by Sonic Pi directly however it should also
+  // be possible to open a socket and receive these messages
+  // on other Ruby applications
+  //
+  oscpkt::PacketWriter pkt;
+  oscpkt::Message message("/link/tempo");
+  message.pushDouble(bpm);
+  pkt.addMessage(message);
+
+  asio::error_code err;
+  sock.send_to(asio::buffer(pkt.packetData(), pkt.packetSize()), remote_endpoint, 0, err);
+}
+
+void set_start_stop_callback(bool isPlaying)
+{
+  // see notes on callback above
+  oscpkt::PacketWriter pkt;
+  oscpkt::Message message("/link/start_stop");
+  message.pushInt32(isPlaying);
+  pkt.addMessage(message);
+
+  asio::error_code err;
+  sock.send_to(asio::buffer(pkt.packetData(), pkt.packetSize()), remote_endpoint, 0, err);
+}
+
+void set_num_peers_callback(std::size_t numPeers)
+{
+  // OSC needs a uint32
+  int peerCountAsInt;
+  if(numPeers > std::numeric_limits<int>::max()) {
+    // stop counting if we hit the max - v. unlikely!
+    peerCountAsInt = std::numeric_limits<int>::max();
+  }
+  else
+  {
+    peerCountAsInt = static_cast<int>(numPeers);
+  }
+
+  // see notes on callback above
+  oscpkt::PacketWriter pkt;
+  oscpkt::Message message("/link/num_peers");
+  message.pushInt32(peerCountAsInt);
+  pkt.addMessage(message);
+
+  asio::error_code err;
+  sock.send_to(asio::buffer(pkt.packetData(), pkt.packetSize()), remote_endpoint, 0, err);
+}
 
 void ableton_link_enable()
 {
+  sock.open(asio::ip::udp::v4());
+  // TODO: make host and port configurable
+  remote_endpoint = asio::ip::udp::endpoint(asio::ip::address::from_string("127.0.0.1"), 4559);
+
+  linkInstance.setTempoCallback(set_tempo_callback);
+  linkInstance.setStartStopCallback(set_start_stop_callback);
+  linkInstance.setNumPeersCallback(set_num_peers_callback);
   linkInstance.enable(true);
 }
 
 void ableton_link_disable()
 {
+  sock.close();
   linkInstance.enable(false);
 }
 
@@ -174,11 +244,6 @@ void ableton_link_force_beat_after(double req_beat, double offset)
   sessionState.forceBeatAtTime(req_beat, req_time, quantum);
   linkInstance.commitAppSessionState(sessionState);
 }
-
-/* void ableton_link_num_peers_callback(Object block) */
-/* { */
-/*   linkInstance.setNumPeersCallback(protect(rb_yield, block)); */
-/* } */
 
 extern "C"
 void Init_ableton_link()
