@@ -226,6 +226,13 @@ Object ableton_link_status()
   output[Symbol("tempo")] = to_ruby(sessionState.tempo());
   output[Symbol("peers")] = to_ruby(linkInstance.numPeers());
 
+  // cast to float
+  std::chrono::duration<float> time_now = std::chrono::duration<float>(linkInstance.clock().micros());
+  std::chrono::duration<float> beat_zero = std::chrono::duration<float>(sessionState.timeAtBeat(0.0, quantum));
+
+  output[Symbol("now")] = to_ruby(time_now.count());
+  output[Symbol("beat_zero")] = to_ruby(beat_zero.count());
+
   return output;
 }
 
