@@ -1,0 +1,40 @@
+#!/usr/bin/env ruby
+
+require "bundler/setup"
+require "ableton_link"
+require 'socket'
+
+server = TCPServer.new 17001
+link = AbletonLink.new
+link.enable
+
+Thread.new do
+  loop do
+    puts link.status
+    sleep link.time_until_subdivision_within_beat(0.0).abs
+  end
+end
+
+begin
+  loop do
+    Thread.start(server.accept) do |client|
+      while line = client.gets
+        case line
+        when /status/
+          client.puts link.status[:tempo]
+        when /tempo/
+          new_tempo = (line.gsub(/\Atempo\s+/, '')).strip.to_f
+          link.set_tempo new_tempo
+          client.puts "Tempo set to #{new_tempo}\n"
+        when /quit/
+          client.puts "Shutting down server\n"
+          exit
+        end
+      end
+      client.close
+    end
+  end
+rescue Errno::ECONNRESET, Errno::EPIPE => e
+  puts e.message
+  retry
+end
