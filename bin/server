@@ -4,6 +4,8 @@ require "bundler/setup"
 require "ableton_link"
 require 'socket'
 
+STDOUT.sync = true
+
 server = TCPServer.new 17001
 link = AbletonLink.new
 link.enable
