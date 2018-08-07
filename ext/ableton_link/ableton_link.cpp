@@ -164,7 +164,9 @@ Object ableton_link_time_until_downbeat()
   double beatsLeftInBar = quantum - sessionState.phaseAtTime(linkInstance.clock().micros(), quantum);
   double currentBeat = sessionState.beatAtTime(linkInstance.clock().micros(), quantum);
 
-  std::chrono::duration<float> time_until_downbeat = std::chrono::duration<float>(sessionState.timeAtBeat(currentBeat + beatsLeftInBar, quantum) - linkInstance.clock().micros());
+  std::chrono::duration<float> time_until_downbeat =
+    std::chrono::duration<float>(sessionState.timeAtBeat(currentBeat +
+          beatsLeftInBar, quantum) - linkInstance.clock().micros());
 
   return to_ruby(time_until_downbeat.count());
 }
@@ -236,6 +238,27 @@ Object ableton_link_status()
   return output;
 }
 
+Object ableton_link_status_at_beat(double req_beat)
+{
+  ableton::Link::SessionState sessionState = linkInstance.captureAppSessionState();
+
+  Hash output;
+  output[Symbol("beat")] = to_ruby(req_beat);
+  output[Symbol("phase")] = to_ruby(sessionState.phaseAtTime(sessionState.timeAtBeat(req_beat, quantum), quantum));
+  output[Symbol("playing?")] = to_ruby(sessionState.isPlaying());
+  output[Symbol("tempo")] = to_ruby(sessionState.tempo());
+  output[Symbol("peers")] = to_ruby(linkInstance.numPeers());
+
+  // cast to float
+  std::chrono::duration<float> time_at_beat = std::chrono::duration<float>(sessionState.timeAtBeat(req_beat, quantum));
+  std::chrono::duration<float> beat_zero = std::chrono::duration<float>(sessionState.timeAtBeat(0.0, quantum));
+
+  output[Symbol("now")] = to_ruby(time_at_beat.count());
+  output[Symbol("beat_zero")] = to_ruby(beat_zero.count());
+
+  return output;
+}
+
 void ableton_link_request_beat_after(double req_beat, double offset)
 {
   ableton::Link::SessionState sessionState = linkInstance.captureAppSessionState();
@@ -271,6 +294,7 @@ void Init_ableton_link()
     .define_method("quantum", &ableton_link_quantum)
     .define_method("set_quantum", &ableton_link_set_quantum)
     .define_method("status", &ableton_link_status)
+    .define_method("status_at_beat", &ableton_link_status_at_beat)
     // .define_method("num_peers_callback", &ableton_link_num_peers_callback)
     .define_method("request_beat_after", &ableton_link_request_beat_after)
     .define_method("force_beat_after!", &ableton_link_force_beat_after)

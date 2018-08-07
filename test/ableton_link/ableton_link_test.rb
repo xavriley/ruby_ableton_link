@@ -87,6 +87,11 @@ class AbletonLinkTest < Minitest::Test
     assert @link.time_until_subdivision_within_beat(0.25).round(2) == 0.75
   end
 
+  def test_status_at_beat
+    @link.enable
+    assert @link.status_at_beat(0)[:beat] == 0.0 # we shouldn't have hit beat zero yet
+  end
+
   def test_request_beat_after
     @link.enable
     @link.request_beat_after(0, 0.5) # set beat zero 0.5 secs into future
