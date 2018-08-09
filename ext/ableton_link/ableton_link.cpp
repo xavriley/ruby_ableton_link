@@ -164,7 +164,7 @@ Object ableton_link_time_until_downbeat()
   double beatsLeftInBar = quantum - sessionState.phaseAtTime(linkInstance.clock().micros(), quantum);
   double currentBeat = sessionState.beatAtTime(linkInstance.clock().micros(), quantum);
 
-  std::chrono::duration<float> time_until_downbeat = std::chrono::duration<float>(sessionState.timeAtBeat(currentBeat + beatsLeftInBar, quantum) - linkInstance.clock().micros());
+  std::chrono::duration<double> time_until_downbeat = std::chrono::duration<double>(sessionState.timeAtBeat(currentBeat + beatsLeftInBar, quantum) - linkInstance.clock().micros());
 
   return to_ruby(time_until_downbeat.count());
 }
@@ -186,8 +186,8 @@ Object ableton_link_time_until_beat_within_bar(double req_phase)
     wait = (quantum - phase_now) + req_phase;
   }
 
-  std::chrono::duration<float> time_until_beat =
-    std::chrono::duration<float>(sessionState.timeAtBeat(current_beat + wait, quantum) - linkInstance.clock().micros());
+  std::chrono::duration<double> time_until_beat =
+    std::chrono::duration<double>(sessionState.timeAtBeat(current_beat + wait, quantum) - linkInstance.clock().micros());
 
   return to_ruby(time_until_beat.count());
 }
@@ -209,8 +209,8 @@ Object ableton_link_time_until_subdivision_within_beat(double req_beat)
     target_beat = floor(current_beat) + 1.0 + req_beat;
   }
 
-  std::chrono::duration<float> time_until_subdivision =
-    std::chrono::duration<float>(sessionState.timeAtBeat(target_beat, quantum) - linkInstance.clock().micros());
+  std::chrono::duration<double> time_until_subdivision =
+    std::chrono::duration<double>(sessionState.timeAtBeat(target_beat, quantum) - linkInstance.clock().micros());
 
   return to_ruby(time_until_subdivision.count());
 }
@@ -226,9 +226,9 @@ Object ableton_link_status()
   output[Symbol("tempo")] = to_ruby(sessionState.tempo());
   output[Symbol("peers")] = to_ruby(linkInstance.numPeers());
 
-  // cast to float
-  std::chrono::duration<float> time_now = std::chrono::duration<float>(linkInstance.clock().micros());
-  std::chrono::duration<float> beat_zero = std::chrono::duration<float>(sessionState.timeAtBeat(0.0, quantum));
+  // cast to double
+  std::chrono::duration<double> time_now = std::chrono::duration<double>(linkInstance.clock().micros());
+  std::chrono::duration<double> beat_zero = std::chrono::duration<double>(sessionState.timeAtBeat(0.0, quantum));
 
   output[Symbol("now")] = to_ruby(time_now.count());
   output[Symbol("beat_zero")] = to_ruby(beat_zero.count());
