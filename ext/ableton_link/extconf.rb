@@ -1,4 +1,4 @@
-require 'mkmf-rice'
+require 'mkmf'
 
 CWD = File.expand_path(File.dirname(__FILE__))
 LINK_DIR = File.join(CWD, 'link')

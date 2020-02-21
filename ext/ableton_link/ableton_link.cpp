@@ -1,11 +1,9 @@
+#include "ableton_link.hpp"
 #include "oscpkt.hh"
-#include "rice/Class.hpp"
-#include "rice/String.hpp"
-#include "rice/Symbol.hpp"
-#include "rice/Hash.hpp"
 #include "ableton/Link.hpp"
 
-using namespace Rice;
+VALUE AbletonLink = Qnil;
+VALUE rb_cAbletonLink = Qnil;
 
 double initial_tempo{120.0};
 double quantum{4.0};
@@ -77,27 +75,15 @@ void set_num_peers_callback(std::size_t numPeers)
   sock.send_to(asio::buffer(pkt.packetData(), pkt.packetSize()), remote_endpoint, 0, err);
 }
 
-void ableton_link_enable()
-{
-  sock.open(asio::ip::udp::v4());
-  // TODO: make host and port configurable
-  remote_endpoint = asio::ip::udp::endpoint(asio::ip::address::from_string("127.0.0.1"), 4559);
-
-  linkInstance.setTempoCallback(set_tempo_callback);
-  linkInstance.setStartStopCallback(set_start_stop_callback);
-  linkInstance.setNumPeersCallback(set_num_peers_callback);
-  linkInstance.enable(true);
-}
-
 void ableton_link_disable()
 {
   sock.close();
   linkInstance.enable(false);
 }
 
-Object ableton_link_enabled()
+VALUE ableton_link_enabled()
 {
-  return to_ruby(linkInstance.isEnabled());
+  return linkInstance.isEnabled();
 }
 
 void ableton_link_start_stop_sync_enable()
@@ -110,9 +96,9 @@ void ableton_link_start_stop_sync_disable()
   linkInstance.enableStartStopSync(false);
 }
 
-Object ableton_link_start_stop_sync_enabled()
+VALUE ableton_link_start_stop_sync_enabled()
 {
-  return to_ruby(linkInstance.isStartStopSyncEnabled());
+  return linkInstance.isStartStopSyncEnabled();
 }
 
 void ableton_link_start_playing()
@@ -129,16 +115,16 @@ void ableton_link_stop_playing()
   linkInstance.commitAppSessionState(sessionState);
 }
 
-Object ableton_link_is_playing()
+VALUE ableton_link_is_playing()
 {
   ableton::Link::SessionState sessionState = linkInstance.captureAppSessionState();
-  return to_ruby(sessionState.isPlaying());
+  return sessionState.isPlaying();
 }
 
-Object ableton_link_tempo()
+VALUE ableton_link_tempo()
 {
   ableton::Link::SessionState sessionState = linkInstance.captureAppSessionState();
-  return to_ruby(sessionState.tempo());
+  return sessionState.tempo();
 }
 
 void ableton_link_set_tempo(double tempo)
@@ -148,9 +134,9 @@ void ableton_link_set_tempo(double tempo)
   linkInstance.commitAppSessionState(sessionState);
 }
 
-Object ableton_link_quantum()
+VALUE ableton_link_quantum()
 {
-  return to_ruby(quantum);
+  return quantum;
 }
 
 void ableton_link_set_quantum(double new_quantum)
@@ -158,7 +144,7 @@ void ableton_link_set_quantum(double new_quantum)
   quantum = new_quantum;
 }
 
-Object ableton_link_time_until_downbeat()
+VALUE ableton_link_time_until_downbeat()
 {
   ableton::Link::SessionState sessionState = linkInstance.captureAppSessionState();
   double beatsLeftInBar = quantum - sessionState.phaseAtTime(linkInstance.clock().micros(), quantum);
@@ -166,10 +152,10 @@ Object ableton_link_time_until_downbeat()
 
   std::chrono::duration<double> time_until_downbeat = std::chrono::duration<double>(sessionState.timeAtBeat(currentBeat + beatsLeftInBar, quantum) - linkInstance.clock().micros());
 
-  return to_ruby(time_until_downbeat.count());
+  return time_until_downbeat.count();
 }
 
-Object ableton_link_time_until_beat_within_bar(double req_phase)
+VALUE ableton_link_time_until_beat_within_bar(double req_phase)
 {
   ableton::Link::SessionState sessionState = linkInstance.captureAppSessionState();
 
@@ -189,10 +175,10 @@ Object ableton_link_time_until_beat_within_bar(double req_phase)
   std::chrono::duration<double> time_until_beat =
     std::chrono::duration<double>(sessionState.timeAtBeat(current_beat + wait, quantum) - linkInstance.clock().micros());
 
-  return to_ruby(time_until_beat.count());
+  return time_until_beat.count();
 }
 
-Object ableton_link_time_until_subdivision_within_beat(double req_beat)
+VALUE ableton_link_time_until_subdivision_within_beat(double req_beat)
 {
   ableton::Link::SessionState sessionState = linkInstance.captureAppSessionState();
 
@@ -212,26 +198,26 @@ Object ableton_link_time_until_subdivision_within_beat(double req_beat)
   std::chrono::duration<double> time_until_subdivision =
     std::chrono::duration<double>(sessionState.timeAtBeat(target_beat, quantum) - linkInstance.clock().micros());
 
-  return to_ruby(time_until_subdivision.count());
+  return time_until_subdivision.count();
 }
 
-Object ableton_link_status()
+VALUE ableton_link_status()
 {
   ableton::Link::SessionState sessionState = linkInstance.captureAppSessionState();
 
-  Hash output;
-  output[Symbol("beat")] = to_ruby(sessionState.beatAtTime(linkInstance.clock().micros(), quantum));
-  output[Symbol("phase")] = to_ruby(sessionState.phaseAtTime(linkInstance.clock().micros(), quantum));
-  output[Symbol("playing?")] = to_ruby(sessionState.isPlaying());
-  output[Symbol("tempo")] = to_ruby(sessionState.tempo());
-  output[Symbol("peers")] = to_ruby(linkInstance.numPeers());
+  VALUE output = rb_hash_new();
+  rb_hash_aset(output, ID2SYM(rb_intern("beat")), sessionState.beatAtTime(linkInstance.clock().micros(), quantum));
+  rb_hash_aset(output, ID2SYM(rb_intern("phase")), sessionState.phaseAtTime(linkInstance.clock().micros(), quantum));
+  rb_hash_aset(output, ID2SYM(rb_intern("playing?")), sessionState.isPlaying());
+  rb_hash_aset(output, ID2SYM(rb_intern("tempo")), sessionState.tempo());
+  rb_hash_aset(output, ID2SYM(rb_intern("peers")), linkInstance.numPeers());
 
   // cast to double
   std::chrono::duration<double> time_now = std::chrono::duration<double>(linkInstance.clock().micros());
   std::chrono::duration<double> beat_zero = std::chrono::duration<double>(sessionState.timeAtBeat(0.0, quantum));
 
-  output[Symbol("now")] = to_ruby(time_now.count());
-  output[Symbol("beat_zero")] = to_ruby(beat_zero.count());
+  rb_hash_aset(output, ID2SYM(rb_intern("now")), time_now.count());
+  rb_hash_aset(output, ID2SYM(rb_intern("beat_zero")), beat_zero.count());
 
   return output;
 }
@@ -252,29 +238,42 @@ void ableton_link_force_beat_after(double req_beat, double offset)
   linkInstance.commitAppSessionState(sessionState);
 }
 
-extern "C"
+VALUE rb_ableton_link_enable(VALUE self)
+{
+  sock.open(asio::ip::udp::v4());
+  // TODO: make host and port configurable
+  remote_endpoint = asio::ip::udp::endpoint(asio::ip::address::from_string("127.0.0.1"), 4559);
+
+  linkInstance.setTempoCallback(set_tempo_callback);
+  linkInstance.setStartStopCallback(set_start_stop_callback);
+  linkInstance.setNumPeersCallback(set_num_peers_callback);
+  linkInstance.enable(true);
+  return Qtrue;
+}
+
 void Init_ableton_link()
 {
-  Class rb_cAbletonLink =
-    define_class("AbletonLink")
-    .define_method("enable", &ableton_link_enable)
-    .define_method("disable", &ableton_link_disable)
-    .define_method("enabled?", &ableton_link_enabled)
-    .define_method("enable_start_stop_sync", &ableton_link_start_stop_sync_enable)
-    .define_method("disable_start_stop_sync", &ableton_link_start_stop_sync_disable)
-    .define_method("start_stop_sync_enabled?", &ableton_link_start_stop_sync_enabled)
-    .define_method("start_playing", &ableton_link_start_playing)
-    .define_method("stop_playing", &ableton_link_stop_playing)
-    .define_method("is_playing?", &ableton_link_is_playing)
-    .define_method("tempo", &ableton_link_tempo)
-    .define_method("set_tempo", &ableton_link_set_tempo)
-    .define_method("quantum", &ableton_link_quantum)
-    .define_method("set_quantum", &ableton_link_set_quantum)
-    .define_method("status", &ableton_link_status)
-    // .define_method("num_peers_callback", &ableton_link_num_peers_callback)
-    .define_method("request_beat_after", &ableton_link_request_beat_after)
-    .define_method("force_beat_after!", &ableton_link_force_beat_after)
-    .define_method("time_until_downbeat", &ableton_link_time_until_downbeat)
-    .define_method("time_until_beat_within_bar", &ableton_link_time_until_beat_within_bar)
-    .define_method("time_until_subdivision_within_beat", &ableton_link_time_until_subdivision_within_beat);
+	rb_cAbletonLink = rb_define_class("AbletonLink", rb_cObject);
+	// https://stackoverflow.com/a/19249603
+	rb_define_method(rb_cAbletonLink, "enable", reinterpret_cast<VALUE(*)(...)>(rb_ableton_link_enable), 0);
+	/* rb_define_method(rb_cAbletonLink, "disable", ableton_link_disable, argc); */
+	/* rb_define_method(rb_cAbletonLink, "enabled?", ableton_link_enabled, argc); */
+	/* rb_define_method(rb_cAbletonLink, "enable_start_stop_sync", ableton_link_start_stop_sync_enable, argc); */
+	/* rb_define_method(rb_cAbletonLink, "disable_start_stop_sync", ableton_link_start_stop_sync_disable, argc); */
+	/* rb_define_method(rb_cAbletonLink, "start_stop_sync_enabled?", ableton_link_start_stop_sync_enabled, argc); */
+	/* rb_define_method(rb_cAbletonLink, "start_playing", ableton_link_start_playing, argc); */
+	/* rb_define_method(rb_cAbletonLink, "stop_playing", ableton_link_stop_playing, argc); */
+	/* rb_define_method(rb_cAbletonLink, "is_playing?", ableton_link_is_playing, argc); */
+	/* rb_define_method(rb_cAbletonLink, "tempo", ableton_link_tempo, argc); */
+	/* rb_define_method(rb_cAbletonLink, "set_tempo", ableton_link_set_tempo, argc); */
+	/* rb_define_method(rb_cAbletonLink, "quantum", ableton_link_quantum, argc); */
+	/* rb_define_method(rb_cAbletonLink, "set_quantum", ableton_link_set_quantum, argc); */
+	/* rb_define_method(rb_cAbletonLink, "status", ableton_link_status, argc); */
+	/* // .define_method(rb_cAbletonLink, "num_peers_callback", ableton_link_num_peers_callback, argc); */
+	/* rb_define_method(rb_cAbletonLink, "request_beat_after", ableton_link_request_beat_after, argc); */
+	/* rb_define_method(rb_cAbletonLink, "force_beat_after!", ableton_link_force_beat_after, argc); */
+	/* rb_define_method(rb_cAbletonLink, "time_until_downbeat", ableton_link_time_until_downbeat, argc); */
+	/* rb_define_method(rb_cAbletonLink, "time_until_beat_within_bar", ableton_link_time_until_beat_within_bar, argc); */
+	/* rb_define_method(rb_cAbletonLink, "time_until_subdivision_within_beat", ableton_link_time_until_subdivision_within_beat, argc); */
 }
+
