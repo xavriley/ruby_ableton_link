@@ -72,9 +72,9 @@ class AbletonLinkTest < Minitest::Test
     @link.set_tempo(60) # makes maths easier
     @link.force_beat_after!(3.0, 0.0) # set fourth beat to be now (zero indexed!)
     # beat not yet reached
-    assert @link.time_until_beat_within_bar(3.5).round(1) == 0.5
+    assert_in_delta @link.time_until_beat_within_bar(3.5).round(1), 0.5, 0.01
     # beat already passed - wait until the next bar
-    assert @link.time_until_beat_within_bar(2.0).ceil == 3
+    assert_equal @link.time_until_beat_within_bar(2.0).ceil, 3
   end
 
   def test_time_until_subdivision_within_beat
@@ -82,9 +82,9 @@ class AbletonLinkTest < Minitest::Test
     @link.set_tempo(60) # makes maths easier
     @link.force_beat_after!(2.5, 0.0) # set offbeat of beat 3 to be now
     # beat not yet reached
-    assert @link.time_until_subdivision_within_beat(0.75).round(2) == 0.25
+    assert_in_delta @link.time_until_subdivision_within_beat(0.75).round(2), 0.25, 0.01
     # beat already passed - wait until the next bar
-    assert @link.time_until_subdivision_within_beat(0.25).round(2) == 0.75
+    assert_in_delta @link.time_until_subdivision_within_beat(0.25).round(2), 0.75, 0.01
   end
 
   def test_request_beat_after
