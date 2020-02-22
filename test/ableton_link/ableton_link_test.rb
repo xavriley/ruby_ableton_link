@@ -46,7 +46,7 @@ class AbletonLinkTest < Minitest::Test
     new_tempo = init_tempo + 10
     @link.set_tempo(new_tempo)
     refute @link.tempo == init_tempo
-    assert @link.tempo == (init_tempo + 10)
+    assert_equal @link.tempo, (init_tempo + 10)
   end
 
   def test_it_sets_quantum
