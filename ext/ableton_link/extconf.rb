@@ -34,4 +34,4 @@ else
   RUBY_PLATFORM
 end
 
-create_makefile('ableton_link') {|conf| puts conf if ENV['CI']; conf.gsub("/wd4503", "") }
+create_makefile('ableton_link') {|conf| puts conf if ENV['CI']; conf }
