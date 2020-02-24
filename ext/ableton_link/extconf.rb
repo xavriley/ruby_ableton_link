@@ -32,5 +32,4 @@ else
   RUBY_PLATFORM
 end
 
-
-create_makefile('ableton_link')
+create_makefile('ableton_link') {|conf| puts conf if ENV['CI'] }
