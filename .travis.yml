@@ -1,2 +1,4 @@
 language: ruby
+rvm:
+  - 2.6
 script: rake clean && rake compile && rake test
