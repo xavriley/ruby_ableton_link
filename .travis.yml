@@ -1,4 +1,4 @@
 language: ruby
 rvm:
   - 2.6
-script: rake clean && rake compile && rake test
+script: bundle exec rake clean && bundle exec rake compile && bundle exec rake test
