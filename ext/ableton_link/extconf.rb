@@ -27,9 +27,11 @@ when /.*darwin.*/
   $CXXFLAGS += " -std=c++11 -stdlib=libc++ "
 when /.*mingw.*/, /bccwin32/
   $defs << ' -DLINK_PLATFORM_WINDOWS=1 '
-  $defs << ' /wd4503 '
+  # This was copied from node-abletonlink but appears
+  # to be failing with MinGW on appveyor
+  # $defs << ' /wd4503 '
 else
   RUBY_PLATFORM
 end
 
-create_makefile('ableton_link') {|conf| puts conf if ENV['CI']; conf }
+create_makefile('ableton_link') {|conf| puts conf if ENV['CI']; conf.gsub("/wd4503", "") }
